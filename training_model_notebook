@@ -1,0 +1,5 @@
+from datasets  
+import load_dataset 
+import new_train  
+
+raw_dataset = load_dataset("json", data_files="training_ryan_temp_dataset.jsonl", split="train") new_train.run_train_on_model( hu_fa_data=raw_dataset, output="./test_temp", new_model_name="Llama-3.2-3B-training_ryan_temp_dataset", epochs=1, batch_size=1) 
