@@ -1,71 +1,86 @@
 # Acuratio Model Training
 
-Este repositorio contiene todo lo necesario para generar un dataset estructurado en español y entrenar un modelo de lenguaje basado en LLaMA-3 usando LoRA. Se incluyen instrucciones detalladas, scripts modulares y configuraciones de máquinas virtuales para facilitar el trabajo colaborativo.
+Este repositorio contiene todo lo necesario para generar un dataset técnico en español y entrenar un modelo de lenguaje basado en LLaMA-3 utilizando LoRA. Incluye pipelines automatizados y configuración para su despliegue en máquinas virtuales con `vllm`.
+
+---
 
 ## Estructura del Proyecto
 
-```
+'''
 Acuratio-Model-Training/
 │
-├── dataset/                      # Lógica de generación del dataset
-│   ├── fewshot_templates.py
-│   ├── chunker.py
-│   ├── generator.py
-│   ├── postprocessor.py
-│   └── run_generate_dataset.py
+├── Dataset/
+│   └── generate_dataset_pipeline.py      # Generación completa del dataset
 │
-├── training/                     # Código para entrenamiento del modelo
-│   ├── train_model.py
-│   ├── training_model.py
-│   ├── prepare_dataset_and_train.py
-│   └── training_model_notebook.ipynb
+├── Entrenar Modelo/
+│   └── train_pipeline.py                 # Pipeline de entrenamiento con LoRA
 │
-├── virtual_machines/            # Instrucciones de configuración de VMs
-│   ├── README_andres_vllm.md
-│   └── README_jonander_a100.md
+├── Maquina Virtual/
+│   └── README.md                         # Configuración de entorno en VMs (GCP)
 │
-├── context_full_dataset.jsonl
-├── full_contexted_manual_trained_dataset.jsonl
-├── requirements.txt
-└── README.md
-```
+├── requirements.txt                      # Requisitos del entorno
+└── README.md                             # Este archivo
+'''
+
+---
 
 ## Objetivo
 
-El proyecto tiene como objetivo construir un sistema de entrenamiento de modelos LLaMA-3 basado en documentación técnica. El sistema genera preguntas y respuestas técnicas en español a partir de documentos, entrena modelos con LoRA y permite su despliegue en VMs con vllm.
+Construir un sistema modular y reproducible para:
+
+- Generar datasets QA a partir de documentación técnica en español.
+- Convertir los datos al formato `ChatML`.
+- Entrenar modelos LLaMA-3 con `LoRA`.
+- Desplegar el modelo en entornos con GPUs (A100) mediante `vllm`.
+
+---
 
 ## Instalación
 
 1. Clona el repositorio:
-   git clone https://github.com/tu_usuario/Acuratio-Model-Training.git
-   cd Acuratio-Model-Training
+'''
+git clone https://github.com/tu_usuario/Acuratio-Model-Training.git
+cd Acuratio-Model-Training
+'''
 
-2. Instala los requerimientos:
-   pip install -r requirements.txt
+2. Instala las dependencias:
+'''
+pip install -r requirements.txt
+'''
 
-## Generación de Dataset
+---
 
-cd dataset
-python run_generate_dataset.py
+## Generación del Dataset
 
-El resultado se guarda como context_full_dataset.jsonl.
+Ejecuta el siguiente pipeline para generar el dataset inicial estructurado:
+'''
+python Dataset/generate_dataset_pipeline.py
+'''
+- El archivo de salida será: `context_full_dataset.jsonl`
 
-## Conversión de Dataset para Entrenamiento
-
-python training/prepare_dataset_and_train.py
-
-Este script convierte el dataset anterior al formato esperado por ChatML.
+---
 
 ## Entrenamiento del Modelo
 
-python training/train_model.py
+Lanza el entrenamiento del modelo sobre el dataset procesado:
+'''
+python Entrenar\ Modelo/train_pipeline.py
+'''
+- Entrena con LoRA y guarda los pesos finos.
+- Incluye la conversión automática a `ChatML`.
 
-Esto entrena el modelo usando LoRA y guarda los pesos entrenados.
+---
 
-## Configuración de Máquinas Virtuales
+## Configuración de la Máquina Virtual
 
-Consulta los archivos dentro de la carpeta /virtual_machines para desplegar el modelo con vllm en Google Cloud Platform.
+Consulta el siguiente archivo para instrucciones completas de despliegue:
+'''
+Maquina Virtual/README.md
+'''
+- Incluye configuración de `nginx`, `Jupyter Lab`, `SSH`, y ejecución de `vllm` con Docker.
+
+---
 
 ## Contacto
 
-Cualquier duda o mejora, contactar con andressant05.
+Para dudas, mejoras o colaboración: **andressant05**
