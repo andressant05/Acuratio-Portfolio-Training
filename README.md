@@ -10,16 +10,16 @@ Este repositorio contiene todo lo necesario para generar un dataset técnico en 
 Acuratio-Model-Training/
 │
 ├── Dataset/
-│   └── generate_dataset_pipeline.py      # Generación completa del dataset
+│   └── generate_dataset_pipeline.py         # Generación completa del dataset
 │
 ├── Entrenar Modelo/
-│   └── train_pipeline.py                 # Pipeline de entrenamiento con LoRA
+│   └── train_pipeline.py                    # Pipeline de entrenamiento con LoRA
 │
 ├── Maquina Virtual/
-│   └── README.md                         # Configuración de entorno en VMs (GCP)
+│   └── README.md                            # Configuración de entorno en VMs (GCP)
 │
-├── requirements.txt                      # Requisitos del entorno
-└── README.md                             # Este archivo
+├── requirements.txt                         # Requisitos del entorno
+└── README.md                                # Este archivo
 '''
 
 ---
@@ -84,3 +84,4 @@ Maquina Virtual/README.md
 ## Contacto
 
 Para dudas, mejoras o colaboración: **andressant05**
+
