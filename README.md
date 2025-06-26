@@ -39,24 +39,24 @@ Construir un sistema modular y reproducible para:
 ## Instalación
 
 1. Clona el repositorio:
-'''
+```
 git clone https://github.com/tu_usuario/Acuratio-Model-Training.git
 cd Acuratio-Model-Training
-'''
+```
 
 2. Instala las dependencias:
-'''
+```
 pip install -r requirements.txt
-'''
+```
 
 ---
 
 ## Generación del Dataset
 
 Ejecuta el siguiente pipeline para generar el dataset inicial estructurado:
-'''
+```
 python Dataset/generate_dataset_pipeline.py
-'''
+```
 - El archivo de salida será: `context_full_dataset.jsonl`
 
 ---
@@ -64,9 +64,9 @@ python Dataset/generate_dataset_pipeline.py
 ## Entrenamiento del Modelo
 
 Lanza el entrenamiento del modelo sobre el dataset procesado:
-'''
+```
 python Entrenar\\ Modelo/train_pipeline.py
-'''
+```
 - Entrena con LoRA y guarda los pesos finos.
 - Incluye la conversión automática a `ChatML`.
 
@@ -75,9 +75,9 @@ python Entrenar\\ Modelo/train_pipeline.py
 ## Configuración de la Máquina Virtual
 
 Consulta el siguiente archivo para instrucciones completas de despliegue:
-'''
+```
 Maquina Virtual/README.md
-'''
+```
 - Incluye configuración de `nginx`, `Jupyter Lab`, `SSH`, y ejecución de `vllm` con Docker.
 
 ---
