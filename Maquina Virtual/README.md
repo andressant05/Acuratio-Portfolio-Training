@@ -12,10 +12,10 @@ Instrucciones detalladas para la configuración y uso de dos máquinas virtuales
 
 2. Configurar nginx
 '''
-sudo nano /etc/nginx/sites-available/vllm  # CAMBIA LA IP
-sudo systemctl restart nginx
-docker restart my_vllm_container
-docker logs my_vllm_container -f
+- sudo nano /etc/nginx/sites-available/vllm  # CAMBIA LA IP
+- sudo systemctl restart nginx
+- docker restart my_vllm_container
+- docker logs my_vllm_container -f
 '''
 
 3. Iniciar Jupyter Lab
@@ -51,9 +51,9 @@ docker run -d --runtime nvidia --gpus all \
 
 2. Configurar nginx
 '''
-sudo nano /etc/nginx/sites-available/vllm  # CAMBIA LA IP
-sudo systemctl restart nginx
-docker restart my_vllm_container
+- sudo nano /etc/nginx/sites-available/vllm  # CAMBIA LA IP
+- sudo systemctl restart nginx
+- docker restart my_vllm_container
 '''
 
 3. Iniciar Jupyter Lab
