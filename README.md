@@ -1,3 +1,4 @@
+"""
 # Acuratio Model Training
 
 Este repositorio contiene todo lo necesario para generar un dataset técnico en español y entrenar un modelo de lenguaje basado en LLaMA-3 utilizando LoRA. Incluye pipelines automatizados y configuración para su despliegue en máquinas virtuales con `vllm`.
@@ -64,7 +65,7 @@ python Dataset/generate_dataset_pipeline.py
 
 Lanza el entrenamiento del modelo sobre el dataset procesado:
 '''
-python Entrenar\ Modelo/train_pipeline.py
+python Entrenar\\ Modelo/train_pipeline.py
 '''
 - Entrena con LoRA y guarda los pesos finos.
 - Incluye la conversión automática a `ChatML`.
@@ -84,4 +85,5 @@ Maquina Virtual/README.md
 ## Contacto
 
 Para dudas, mejoras o colaboración: **andressant05**
+"""
 
