@@ -1,4 +1,4 @@
-"""
+
 # Acuratio Model Training
 
 Este repositorio contiene todo lo necesario para generar un dataset técnico en español y entrenar un modelo de lenguaje basado en LLaMA-3 utilizando LoRA. Incluye pipelines automatizados y configuración para su despliegue en máquinas virtuales con `vllm`.
@@ -7,7 +7,7 @@ Este repositorio contiene todo lo necesario para generar un dataset técnico en 
 
 ## Estructura del Proyecto
 
-'''
+"""
 Acuratio-Model-Training/
 │
 ├── Dataset/
@@ -21,7 +21,7 @@ Acuratio-Model-Training/
 │
 ├── requirements.txt                         # Requisitos del entorno
 └── README.md                                # Este archivo
-'''
+"""
 
 ---
 
@@ -85,5 +85,5 @@ Maquina Virtual/README.md
 ## Contacto
 
 Para dudas, mejoras o colaboración: **andressant05**
-"""
+
 
