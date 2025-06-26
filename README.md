@@ -4,22 +4,23 @@ Este repositorio contiene todo lo necesario para generar un dataset estructurado
 
 ## Estructura del Proyecto
 
+```
 Acuratio-Model-Training/
 │
-├── dataset/                  # Lógica de generación del dataset
+├── dataset/                      # Lógica de generación del dataset
 │   ├── fewshot_templates.py
 │   ├── chunker.py
 │   ├── generator.py
 │   ├── postprocessor.py
 │   └── run_generate_dataset.py
 │
-├── training/                 # Código para entrenamiento del modelo
+├── training/                     # Código para entrenamiento del modelo
 │   ├── train_model.py
 │   ├── training_model.py
 │   ├── prepare_dataset_and_train.py
 │   └── training_model_notebook.ipynb
 │
-├── virtual_machines/        # Instrucciones de configuración de VMs
+├── virtual_machines/            # Instrucciones de configuración de VMs
 │   ├── README_andres_vllm.md
 │   └── README_jonander_a100.md
 │
@@ -27,6 +28,7 @@ Acuratio-Model-Training/
 ├── full_contexted_manual_trained_dataset.jsonl
 ├── requirements.txt
 └── README.md
+```
 
 ## Objetivo
 
