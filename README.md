@@ -7,7 +7,7 @@ Este repositorio contiene todo lo necesario para generar un dataset técnico en 
 
 ## Estructura del Proyecto
 
-"""
+```
 Acuratio-Model-Training/
 │
 ├── Dataset/
@@ -21,7 +21,7 @@ Acuratio-Model-Training/
 │
 ├── requirements.txt                         # Requisitos del entorno
 └── README.md                                # Este archivo
-"""
+```
 
 ---
 
