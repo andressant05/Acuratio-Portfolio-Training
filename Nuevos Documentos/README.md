@@ -1,6 +1,6 @@
-# Manuela Shower — Añadir Nuevos Documentos DOCX
+# Processed Chunks — Añadir Nuevos Documentos DOCX
 
-Este script convierte nuevos archivos `.docx` en archivos `.json` estructurados y los añade automáticamente a la carpeta `manuela_shower/`, la cual contiene los documentos que ya han sido procesados por el sistema.
+Este script convierte nuevos archivos `.docx` en archivos `.json` estructurados y los añade automáticamente a la carpeta `processed_chunks/`, la cual contiene los documentos que ya han sido procesados por el sistema.
 
 ---
 
@@ -8,7 +8,7 @@ Este script convierte nuevos archivos `.docx` en archivos `.json` estructurados 
 
 ```
 .
-├── manuela_shower/         # Contiene todos los archivos JSON ya procesados
+├── processed_chunks/         # Contiene todos los archivos JSON ya procesados
 ├── nuevos_docs/            # Aquí debes colocar los nuevos documentos .docx
 ├── parse_docx_to_chunks.py # Script que transforma los .docx en .json
 ```
@@ -17,7 +17,7 @@ Este script convierte nuevos archivos `.docx` en archivos `.json` estructurados 
 
 ## ¿Cómo usarlo?
 
-1. Asegúrate de tener descargada la carpeta `manuela_shower/` desde este repositorio.
+1. Asegúrate de tener descargada la carpeta `processed_chunks/` desde este repositorio.
 2. Coloca tus nuevos documentos `.docx` en la carpeta `nuevos_docs/`.
 3. Ejecuta el siguiente comando:
 
@@ -25,13 +25,13 @@ Este script convierte nuevos archivos `.docx` en archivos `.json` estructurados 
 python parse_docx_to_chunks.py
 ```
 
-Esto generará automáticamente un archivo `.json` por cada `.docx`, en la carpeta `manuela_shower/`.
+Esto generará automáticamente un archivo `.json` por cada `.docx`, en la carpeta `processed_chunks/`.
 
 ---
 
 ## Notas importantes
 
-- No necesitas modificar manualmente nada en `manuela_shower/`.
+- No necesitas modificar manualmente nada en `processed_chunks/`.
 - Si un archivo `.json` con el mismo nombre ya existe, será **reemplazado**.
 - Este script **no requiere conexión a internet** ni ningún entorno especial.
 - Este paso es previo a ejecutar los siguientes scripts del pipeline:
