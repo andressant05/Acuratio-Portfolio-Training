@@ -162,16 +162,28 @@ def entrenar_modelo(
     trainer.model.save_pretrained(nombre_modelo_nuevo)
     print("✅ Modelo guardado exitosamente:", nombre_modelo_nuevo)
 
-# ✅ MAIN: orquesta flujo completo del pipeline de entrenamiento
+# MAIN: orquesta el flujo completo del pipeline de entrenamiento
 def main():
+    # Paso 1: Convertimos el dataset original (formato QA) al formato ChatML
+    # Este paso transforma cada par (contexto, prompt, respuesta) en una estructura con roles (system, user, assistant)
     convertir_dataset_a_chatml(
-        "context_full_dataset.jsonl",
-        "full_contexted_manual_trained_dataset.jsonl"
+        "context_full_dataset.jsonl",                              # Archivo de entrada (QA con contexto)
+        "full_contexted_manual_trained_dataset.jsonl"              # Archivo de salida (formato ChatML)
     )
-    dataset_cargado = load_dataset("json", data_files="full_contexted_manual_trained_dataset.jsonl", split="train")
-    entrenar_modelo(hu_fa_data=dataset_cargado)
 
-# 🛠️ Ejecuta main solo si se llama este archivo directamente
+    # Paso 2: Cargamos el dataset resultante en formato ChatML usando Hugging Face Datasets
+    dataset_cargado = load_dataset(
+        "json", 
+        data_files="full_contexted_manual_trained_dataset.jsonl", 
+        split="train"
+    )
+
+    # Paso 3: Llamamos a la función principal de entrenamiento con LoRA
+    # Este paso realiza el fine-tuning del modelo base LLaMA-3 sobre el nuevo dataset
+    entrenar_modelo(
+        datos_hf=dataset_cargado              # Dataset ya formateado y cargado
+    )
+
 if __name__ == "__main__":
     main()
 
