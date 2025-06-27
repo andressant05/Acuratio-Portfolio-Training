@@ -15,7 +15,7 @@ from trl import SFTTrainer
 # 🔧 CONFIGURACIÓN GLOBAL
 os.environ['CUDA_VISIBLE_DEVICES'] = '0,1,2,3'  # GPUs disponibles
 warnings.filterwarnings("ignore", category=FutureWarning, module="transformers.utils.hub")
-login(token="***REMOVED***")  # Autenticación Hugging Face
+login(token=hugging_face_token)  # Autenticación Hugging Face
 
 # 🔁 FUNCION: convierte el dataset JSONL original en formato ChatML
 def convertir_dataset_a_chatml(ruta_entrada, ruta_salida):
