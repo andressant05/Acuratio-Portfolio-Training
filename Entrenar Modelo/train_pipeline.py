@@ -1,5 +1,3 @@
-# Entrenar Modelo/train_pipeline.py
-
 import os
 import json
 import warnings
@@ -9,118 +7,121 @@ from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
     TrainingArguments,
-    pipeline,
 )
 from peft import PeftModel, LoraConfig, get_peft_model
 from huggingface_hub import login
 from trl import SFTTrainer
 
 # 🔧 CONFIGURACIÓN GLOBAL
-os.environ['CUDA_VISIBLE_DEVICES'] = '0,1,2,3'
+os.environ['CUDA_VISIBLE_DEVICES'] = '0,1,2,3'  # GPUs disponibles
 warnings.filterwarnings("ignore", category=FutureWarning, module="transformers.utils.hub")
-login(token="***REMOVED***")
+login(token="***REMOVED***")  # Autenticación Hugging Face
 
-
-# 🔁 FORMATEO DEL DATASET A CHATML
-def convert_dataset_to_chatml(input_path, output_path):
-    with open(input_path, "r", encoding="utf-8") as fin, open(output_path, "w", encoding="utf-8") as fout:
-        for line in fin:
+# 🔁 FUNCION: convierte el dataset JSONL original en formato ChatML
+def convertir_dataset_a_chatml(ruta_entrada, ruta_salida):
+    with open(ruta_entrada, "r", encoding="utf-8") as fin, open(ruta_salida, "w", encoding="utf-8") as fout:
+        for linea in fin:
             try:
-                item = json.loads(line)
-                context = item["context"]
+                item = json.loads(linea)
+                contexto = item["context"]
                 prompt = item["prompt"]
-                response = item["response"]
-                formatted = {
+                respuesta = item["response"]
+                formato = {
                     "messages": [
-                        {"role": "system", "content": context},
+                        {"role": "system", "content": contexto},
                         {"role": "user", "content": prompt},
-                        {"role": "assistant", "content": response}
+                        {"role": "assistant", "content": respuesta}
                     ]
                 }
-                fout.write(json.dumps(formatted, ensure_ascii=False) + "\n")
+                fout.write(json.dumps(formato, ensure_ascii=False) + "\n")
             except Exception as e:
-                print(f"❌ Skipped a line due to error: {e}")
-    print("✅ Formato ChatML guardado en:", output_path)
+                print(f"❌ Línea ignorada debido a error: {e}")
+    print("✅ Dataset convertido a ChatML en:", ruta_salida)
 
+# 🧼 FUNCION: preprocesado del dataset si viene en otro formato
+def preprocesar_dataset(nombre_dataset, division="train"):
+    dataset = load_dataset(nombre_dataset, split=division,
+                           cache_dir=os.path.expanduser("~/.cache/huggingface_datasets"))
+    muestra = dataset[0]
 
-# 🧼 PRE-PROCESADO
-def preprocess_dataset(dataset_name, split="train"):
-    dataset = load_dataset(dataset_name, split=split, cache_dir=os.path.expanduser("~/.cache/huggingface_datasets"))
-    sample = dataset[0]
-
-    if "messages" in sample or "text" in sample:
+    if "messages" in muestra or "text" in muestra:
         return dataset
-    elif {"instruction", "input", "output"}.issubset(sample.keys()):
-        def merge_fields(example):
+    elif {"instruction", "input", "output"}.issubset(muestra.keys()):
+        def unir_campos(ej):
             return {
-                "text": f"### Instruction:\n{example['instruction']}\n\n### Input:\n{example['input']}\n\n### Response:\n{example['output']}"
+                "text": (
+                    f"### Instruction:\n{ej['instruction']}\n\n"
+                    f"### Input:\n{ej['input']}\n\n"
+                    f"### Response:\n{ej['output']}"
+                )
             }
-        return dataset.map(merge_fields)
+        return dataset.map(unir_campos)
     else:
-        raise ValueError("Unsupported dataset structure.")
+        raise ValueError("Estructura de dataset no soportada.")
 
-
-# 🧠 FORMAT CHAT PARA LLAMA
-def chat_formatting_fn(example):
-    context = ""
-    for msg in example["messages"]:
+# 🧠 FUNCION: formatea cada ejemplo al estilo ChatML con encabezados y fecha actual
+def formato_chat_para_llama(ejemplo):
+    contexto = ""
+    for msg in ejemplo["messages"]:
         if msg["role"] == "system":
-            context = msg["content"].strip()
+            contexto = msg["content"].strip()
 
-    user_msg = next((m["content"].strip() for m in example["messages"] if m["role"] == "user"), "")
-    assistant_msg = next((m["content"].strip() for m in example["messages"] if m["role"] == "assistant"), "")
-    current_date = datetime.now().strftime("%d %b %Y")
+    msg_usuario = next((m["content"].strip() for m in ejemplo["messages"] if m["role"] == "user"), "")
+    msg_asistente = next((m["content"].strip() for m in ejemplo["messages"] if m["role"] == "assistant"), "")
+    fecha_actual = datetime.now().strftime("%d %b %Y")
 
-    text = (
+    texto = (
         "<|begin_of_text|>"
         "<|start_header_id|>system<|end_header_id|>\n\n"
         "Fecha de corte del conocimiento: Diciembre 2023\n"
-        f"Fecha actual: {current_date}\n\n"
-        "Eres un asistente útil, preciso y conciso. Prioriza el contexto proporcionado al responder preguntas del usuario.\n"
-        "Sé claro y exacto. Utiliza tu conocimiento cuando sea relevante.\n\n"
-        f"Contexto:\n{context}"
+        f"Fecha actual: {fecha_actual}\n\n"
+        "Eres un asistente útil, preciso y conciso. Prioriza el contexto proporcionado al responder.\n\n"
+        f"Contexto:\n{contexto}"
         "<|eot_id|>"
         "<|start_header_id|>user<|end_header_id|>\n\n"
-        f"{user_msg}"
+        f"{msg_usuario}"
         "<|eot_id|>"
         "<|start_header_id|>assistant<|end_header_id|>\n\n"
-        f"{assistant_msg}"
+        f"{msg_asistente}"
         "<|eot_id|>"
     )
 
-    return {"text": text}
+    return {"text": texto}
 
-
-# 🔥 ENTRENAMIENTO
-def run_train_on_model(
-    hu_fa_data="full_contexted_manual_trained_dataset.jsonl",
-    output="./results_lora",
-    base_model_name="meta-llama/Llama-3.2-3B-Instruct",
-    new_model_name="Llama-3.2-3B-lora",
-    epochs=1,
-    batch_size=4,
+# 🔥 FUNCION: realiza el entrenamiento con LoRA sobre el modelo base o de checkpoint
+def entrenar_modelo(
+    datos_hf="full_contexted_manual_trained_dataset.jsonl",
+    salida="./results_lora",
+    modelo_base="meta-llama/Llama-3.2-3B-Instruct",
+    nombre_modelo_nuevo="Llama-3.2-3B-lora",
+    epocas=1,
+    tam_batch=4,
     lr=4e-5,
-    resume_from_checkpoint=False
+    reanudar=False
 ):
-    tokenizer = AutoTokenizer.from_pretrained(base_model_name, trust_remote_code=True, use_fast=True, cache_dir="hello_moto")
+    # Tokenizador
+    tokenizer = AutoTokenizer.from_pretrained(modelo_base, trust_remote_code=True, use_fast=True, cache_dir="hello_moto")
     tokenizer.pad_token = tokenizer.eos_token
     tokenizer.padding_side = "right"
 
-    base_model = AutoModelForCausalLM.from_pretrained(base_model_name, device_map="auto", trust_remote_code=True, cache_dir="hello_moto")
-    base_model.config.use_cache = False
-    base_model.config.pretraining_tp = 1
-    base_model.gradient_checkpointing_enable()
+    # Modelo base con checkpoints y gradient checkpointing
+    base = AutoModelForCausalLM.from_pretrained(modelo_base, device_map="auto", trust_remote_code=True, cache_dir="hello_moto")
+    base.config.use_cache = False
+    base.config.pretraining_tp = 1
+    base.gradient_checkpointing_enable()
 
-    raw_data = preprocess_dataset("json", split="train") if isinstance(hu_fa_data, str) else hu_fa_data
-    formatted_data = raw_data.map(chat_formatting_fn)
+    # Carga o usa el dataset
+    datos_raw = preprocesar_dataset("json", split="train") if isinstance(datos_hf, str) else datos_hf
+    datos_formateados = datos_raw.map(formato_chat_para_llama)
 
-    if "messages" in formatted_data.column_names:
-        formatted_data = formatted_data.remove_columns("messages")
+    if "messages" in datos_formateados.column_names:
+        datos_formateados = datos_formateados.remove_columns("messages")
 
-    train_params = TrainingArguments(
-        output_dir=output,
-        num_train_epochs=epochs,
-        per_device_train_batch_size=batch_size,
+    # Parámetros de entrenamiento
+    args = TrainingArguments(
+        output_dir=salida,
+        num_train_epochs=epocas,
+        per_device_train_batch_size=tam_batch,
         gradient_accumulation_steps=2,
         optim="paged_adamw_32bit",
         save_strategy="epoch",
@@ -138,7 +139,8 @@ def run_train_on_model(
         report_to="tensorboard"
     )
 
-    peft_parameters = LoraConfig(
+    # Configuración LoRA
+    parametros_lora = LoraConfig(
         lora_alpha=8,
         lora_dropout=0.1,
         r=8,
@@ -146,35 +148,40 @@ def run_train_on_model(
         task_type="CAUSAL_LM"
     )
 
-    model = get_peft_model(base_model, peft_parameters)
+    modelo_peft = get_peft_model(base, parametros_lora)
 
     trainer = SFTTrainer(
-        model=model,
-        train_dataset=formatted_data,
-        peft_config=peft_parameters,
-        args=train_params
+        model=modelo_peft,
+        train_dataset=datos_formateados,
+        peft_config=parametros_lora,
+        args=args
     )
 
-    print(f"🚀 Starting training – saving to: {new_model_name}")
-    trainer.train(resume_from_checkpoint=resume_from_checkpoint)
-    trainer.model.save_pretrained(new_model_name)
-    print("✅ Modelo guardado con éxito:", new_model_name)
-    
-# ✅ Define main() anywhere before this point
-def main():
-    convert_dataset_to_chatml("context_full_dataset.jsonl", "full_contexted_manual_trained_dataset.jsonl")
-    raw_dataset = load_dataset("json", data_files="full_contexted_manual_trained_dataset.jsonl", split="train")
-    run_train_on_model(hu_fa_data=raw_dataset)
+    print(f"🚀 Iniciando entrenamiento — guardando como: {nombre_modelo_nuevo}")
+    trainer.train(resume_from_checkpoint=reanudar)
+    trainer.model.save_pretrained(nombre_modelo_nuevo)
+    print("✅ Modelo guardado exitosamente:", nombre_modelo_nuevo)
 
-# ✅ Now trigger it when script is run directly
+# ✅ MAIN: orquesta flujo completo del pipeline de entrenamiento
+def main():
+    convertir_dataset_a_chatml(
+        "context_full_dataset.jsonl",
+        "full_contexted_manual_trained_dataset.jsonl"
+    )
+    dataset_cargado = load_dataset("json", data_files="full_contexted_manual_trained_dataset.jsonl", split="train")
+    entrenar_modelo(hu_fa_data=dataset_cargado)
+
+# 🛠️ Ejecuta main solo si se llama este archivo directamente
 if __name__ == "__main__":
     main()
-"""
-📌 NOTA IMPORTANTE:
-Actualmente, este script entrena el modelo incluyendo el 'contexto' como mensaje de sistema (system message).
-Esto mejora la calidad del modelo, pero aumenta el tiempo de entrenamiento significativamente (~3x).
 
-Si se desea hacer entrenamiento más rápido (sin contexto):
-1. Modificar la función `convert_dataset_to_chatml` para no incluir el campo 'context'
-2. Entrenar con ese nuevo dataset. Luego, si se desea, hacer fine-tuning adicional con el dataset con contexto.
+"""
+📌 NOTA:
+Este script incluye el campo 'contexto' como mensaje de sistema, lo que mejora la calidad
+del modelo pero aumenta ~3× el tiempo de entrenamiento.
+
+👉 Para un entrenamiento más rápido (sin contexto):
+   - Modificar `convertir_dataset_a_chatml` para que omita el campo 'contexto'
+   - Entrenar con ese dataset simplificado
+   - Luego, opcionalmente, hacer fine-tuning con dataset completo
 """
