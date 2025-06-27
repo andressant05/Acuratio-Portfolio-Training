@@ -184,51 +184,67 @@ def procesar_archivo(ruta_json):
 
 # 🧠 Ejecución principal del pipeline: detecta archivos nuevos, procesa y graba
 def main():
+    # Inicia temporizador para medir la duración total del proceso
     inicio = time.time()
+
+    # Carpeta que contiene los archivos .json con chunks ya generados desde DOCX
     carpeta = Path("processed_chunks")
     archivos = sorted(carpeta.glob("*.json"))
+
+    # Carpeta donde se guardarán los resultados intermedios por archivo
     carpeta_salida = Path("temp_outputs")
     carpeta_salida.mkdir(exist_ok=True)
 
+    # Archivo que mantiene un registro de los archivos que ya fueron procesados anteriormente
     ruta_procesados = Path(".processed_files.json")
     archivos_procesados = set()
     if ruta_procesados.exists():
         with open(ruta_procesados, "r", encoding="utf-8") as f:
             archivos_procesados = set(json.load(f))
 
+    # Se filtran los archivos que aún no han sido procesados
     nuevos_archivos = [f for f in archivos if f.name not in archivos_procesados]
-    print(f"📁 Archivos nuevos a procesar: {len(nuevos_archivos)}")
+    print(f"Archivos nuevos a procesar: {len(nuevos_archivos)}")
 
     resultados = []
+
+    # Se utilizan hilos para procesar varios archivos en paralelo
     with ThreadPoolExecutor(max_workers=8) as pool:
         tareas = {pool.submit(procesar_archivo, a): a for a in nuevos_archivos}
+
         for t in as_completed(tareas):
             archivo = tareas[t]
             try:
                 pares = t.result()
-                print(f"✅ {archivo.name}: {len(pares)} QAs generadas")
+                print(f"{archivo.name}: {len(pares)} pares QA generados")
                 resultados.extend(pares)
 
+                # Guarda el resultado parcial por archivo como respaldo
                 salida = carpeta_salida / f"{archivo.stem}_qas.jsonl"
                 with open(salida, "w", encoding="utf-8") as f:
                     for qa in pares:
                         f.write(json.dumps(qa, ensure_ascii=False) + "\n")
 
+                # Añade el archivo al registro de procesados
                 archivos_procesados.add(archivo.name)
                 with open(ruta_procesados, "w", encoding="utf-8") as f:
                     json.dump(sorted(archivos_procesados), f, ensure_ascii=False, indent=2)
 
             except Exception as e:
-                print(f"❌ Error al procesar {archivo.name}: {e}")
+                print(f"Error al procesar {archivo.name}: {e}")
 
+    # Se eliminan duplicados del conjunto total
     resultado_final = eliminar_duplicados(resultados)
+
+    # Se escribe el archivo final unificado con todos los pares QA válidos
     with open("context_full_dataset.jsonl", "w", encoding="utf-8") as f:
         for qa in resultado_final:
             f.write(json.dumps(qa, ensure_ascii=False) + "\n")
 
+    # Imprime el tiempo total de ejecución
     duracion = time.time() - inicio
-    print(f"✅ ¡Listo! Dataset generado en context_full_dataset.jsonl")
-    print(f"🕐 Tiempo total: {duracion/60:.2f} minutos")
+    print("¡Listo! Dataset generado en context_full_dataset.jsonl")
+    print(f"Tiempo total: {duracion/60:.2f} minutos")
 
 if __name__ == "__main__":
     main()
