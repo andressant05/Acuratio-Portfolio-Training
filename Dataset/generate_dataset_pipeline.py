@@ -8,8 +8,8 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from openai import OpenAI
 from fuzzywuzzy import fuzz
 
-# 💬 Few-shot templates
-FEW_SHOTS = {
+# 💬 Ejemplos que sirven de guía (few-shots) para el modelo LLM
+EJEMPLOS_TIPICOS = {
     "definition": [
         {
             "prompt": "¿Qué es un equipo de tratamiento térmico según la norma?",
@@ -64,223 +64,178 @@ FEW_SHOTS = {
     ]
 }
 
-# 🔧 LLM setup
-client = OpenAI(api_key="EMPTY", base_url="http://localhost:9000/v1")
+# 🔧 Cliente para comunicarse con el modelo LLM (en este caso, llama3 local)
+cliente_llm = OpenAI(api_key="EMPTY", base_url="http://localhost:9000/v1")
 
-SYSTEM = (
+# 🎯 Instrucción general que guía al modelo
+INSTRUCCION_SISTEMA = (
     "You are a professional dataset generator for machine learning. Your goal is to produce instruction-response pairs "
     "that are strictly based on the input document chunk. Never fabricate information or introduce concepts not explicitly supported by the text. "
     "Responses must be formal, technical, and reference the language or logic of the document exactly. Avoid summaries, advice, or motivation."
 )
 
-def chunk_text(full_text, max_chars=2000):
-    sentences = full_text.split(". ")
-    chunks, current = [], ""
-    for s in sentences:
-        if len(current) + len(s) < max_chars:
-            current += (s + ". ")
+# 🔪 Divide un texto largo en fragmentos manejables de cierto tamaño
+def dividir_texto(texto_completo, max_caracteres=2000):
+    oraciones = texto_completo.split(". ")
+    fragmentos, actual = [], ""
+    for oracion in oraciones:
+        if len(actual) + len(oracion) < max_caracteres:
+            actual += (oracion + ". ")
         else:
-            chunks.append(current.strip())
-            current = s + ". "
-    if current:
-        chunks.append(current.strip())
-    return chunks
+            fragmentos.append(actual.strip())
+            actual = oracion + ". "
+    if actual:
+        fragmentos.append(actual.strip())
+    return fragmentos
 
-def build_prompt(fewshots, chunk_text, type_label, n=2):
-    fs_txt = "\n\n".join(json.dumps(x, ensure_ascii=False) for x in fewshots)
-    return f"""{SYSTEM}
---- FEW-SHOT {type_label.upper()} ---
-{fs_txt}
+# 🧱 Construye el prompt con los ejemplos + texto a analizar
+def construir_prompt(ejemplos, fragmento, tipo, n=2):
+    ejemplos_str = "\n\n".join(json.dumps(x, ensure_ascii=False) for x in ejemplos)
+    return f"""{INSTRUCCION_SISTEMA}
+--- FEW-SHOT {tipo.upper()} ---
+{ejemplos_str}
 
---- DOCUMENT CONTENT ---
-{chunk_text}
+--- DOCUMENTO ---
+{fragmento}
 
 Now generate {n} instruction-response pairs in JSONL format. Base every detail strictly on the document content. Do not invent facts.
 """
 
-def call_llm(prompt):
-    response = client.chat.completions.create(
+# 🔮 Envía el prompt al modelo y obtiene la respuesta
+def llamar_llm(prompt):
+    respuesta = cliente_llm.chat.completions.create(
         model="meta-llama/Llama-3.3-70B-Instruct",
         messages=[
-            {"role": "system", "content": SYSTEM},
+            {"role": "system", "content": INSTRUCCION_SISTEMA},
             {"role": "user", "content": prompt}
         ],
         temperature=0.2,
         max_tokens=1024
     )
-    return response.choices[0].message.content
+    return respuesta.choices[0].message.content
 
-def parse_response(response_text, qtype):
-    parsed = []
-    for line in response_text.strip().splitlines():
+# 📤 Interpreta la respuesta del modelo y extrae los pares válidos
+def interpretar_respuesta(texto_respuesta, tipo):
+    resultado = []
+    for linea in texto_respuesta.strip().splitlines():
         try:
-            item = json.loads(line)
+            item = json.loads(linea)
             if "prompt" in item and "response" in item:
-                item["type"] = qtype
-                parsed.append(item)
+                item["type"] = tipo
+                resultado.append(item)
         except json.JSONDecodeError:
             continue
-    return parsed
+    return resultado
 
-def generate_for_chunk(text, questions_per_type=1, required_types=None):
-    if required_types is None:
-        required_types = ["definition", "justification", "scenario", "role"]
-    all_qas = []
-    for qtype in required_types:
-        prompt = build_prompt(FEW_SHOTS[qtype], text, qtype, n=questions_per_type)
-        response = call_llm(prompt)
-        all_qas.extend(parse_response(response, qtype))
-    return all_qas
+# 🤖 Genera pares QA para cada fragmento de texto
+def generar_qa_para_fragmento(texto, preguntas_por_tipo=1, tipos_requeridos=None):
+    if tipos_requeridos is None:
+        tipos_requeridos = ["definition", "justification", "scenario", "role"]
+    resultado = []
+    for tipo in tipos_requeridos:
+        prompt = construir_prompt(EJEMPLOS_TIPICOS[tipo], texto, tipo, n=preguntas_por_tipo)
+        respuesta = llamar_llm(prompt)
+        resultado.extend(interpretar_respuesta(respuesta, tipo))
+    return resultado
 
-def dedupe(entries, threshold=90):
-    uniq = []
-    for e in entries:
-        if any(fuzz.ratio(e["prompt"], u["prompt"]) > threshold for u in uniq):
+# 🧹 Elimina duplicados similares entre prompts
+def eliminar_duplicados(lista, umbral=90):
+    unicos = []
+    for item in lista:
+        if any(fuzz.ratio(item["prompt"], otro["prompt"]) > umbral for otro in unicos):
             continue
-        uniq.append(e)
-    return uniq
+        unicos.append(item)
+    return unicos
 
-def is_duplicate(new_prompt, existing_prompts, threshold=0.9):
-    for ep in existing_prompts:
-        if difflib.SequenceMatcher(None, new_prompt.lower(), ep.lower()).ratio() > threshold:
+# 🔁 Compara prompts para evitar repetir
+def es_duplicado(prompt_nuevo, prompts_existentes, umbral=0.9):
+    for existente in prompts_existentes:
+        if difflib.SequenceMatcher(None, prompt_nuevo.lower(), existente.lower()).ratio() > umbral:
             return True
     return False
 
-def process_file(json_path):
-    data = json.loads(json_path.read_text(encoding="utf-8"))
-    text = "\n\n".join(data["chunks"])
-    chunks = chunk_text(text, max_chars=3000)
-    selected = [c for c in chunks if len(c.strip()) > 300]
-    out = []
-    seen = set()
+# 🔍 Procesa un archivo JSON, genera pares y adjunta metadatos
+def procesar_archivo(ruta_json):
+    datos = json.loads(ruta_json.read_text(encoding="utf-8"))
+    texto = "\n\n".join(datos["chunks"])
+    fragmentos = dividir_texto(texto, max_caracteres=3000)
+    fragmentos_filtrados = [f for f in fragmentos if len(f.strip()) > 300]
+    resultado = []
+    prompts_vistos = set()
 
-    for idx, ch in enumerate(selected):
-        qas = generate_for_chunk(ch, questions_per_type=1)
-        for qa in qas:
+    for idx, frag in enumerate(fragmentos_filtrados):
+        pares = generar_qa_para_fragmento(frag, preguntas_por_tipo=1)
+        for qa in pares:
             prompt = qa["prompt"]
-            if prompt in seen or is_duplicate(prompt, seen):
+            if prompt in prompts_vistos or es_duplicado(prompt, prompts_vistos):
                 continue
-            seen.add(prompt)
-            out.append({
-                "context": ch.strip(),
+            prompts_vistos.add(prompt)
+            resultado.append({
+                "context": frag.strip(),
                 "prompt": prompt,
                 "response": qa["response"],
                 "metadata": {
-                    "source_file": json_path.name,
+                    "source_file": ruta_json.name,
                     "chunk_index": idx
                 }
             })
 
-    return dedupe(out)
+    return eliminar_duplicados(resultado)
 
+# 🧠 Ejecución principal del pipeline: detecta archivos nuevos, procesa y graba
 def main():
-    start = time.time()
-    folder = Path("manuela_shower")
-    json_files = sorted(folder.glob("*.json"))
-    total_files = len(json_files)
-    output_dir = Path("temp_outputs")
-    output_dir.mkdir(exist_ok=True)
-    results = []
+    inicio = time.time()
+    carpeta = Path("manuela_shower")
+    archivos = sorted(carpeta.glob("*.json"))
+    carpeta_salida = Path("temp_outputs")
+    carpeta_salida.mkdir(exist_ok=True)
 
-    print(f"📁 Found {total_files} files to process.")
+    ruta_procesados = Path(".processed_files.json")
+    archivos_procesados = set()
+    if ruta_procesados.exists():
+        with open(ruta_procesados, "r", encoding="utf-8") as f:
+            archivos_procesados = set(json.load(f))
 
-    completed = 0
-    start_batch = time.time()
+    nuevos_archivos = [f for f in archivos if f.name not in archivos_procesados]
+    print(f"📁 Archivos nuevos a procesar: {len(nuevos_archivos)}")
 
+    resultados = []
     with ThreadPoolExecutor(max_workers=8) as pool:
-        futures = {pool.submit(process_file, jf): jf for jf in json_files}
-        for fut in as_completed(futures):
-            file = futures[fut]
+        tareas = {pool.submit(procesar_archivo, a): a for a in nuevos_archivos}
+        for t in as_completed(tareas):
+            archivo = tareas[t]
             try:
-                entries = fut.result()
-                print(f"✅ {file.name}: {len(entries)} QAs")
-                results.extend(entries)
+                pares = t.result()
+                print(f"✅ {archivo.name}: {len(pares)} QAs generadas")
+                resultados.extend(pares)
 
-                out_path = output_dir / f"{file.stem}_qas.jsonl"
-                with open(out_path, "w", encoding="utf-8") as f:
-                    for qa in entries:
+                salida = carpeta_salida / f"{archivo.stem}_qas.jsonl"
+                with open(salida, "w", encoding="utf-8") as f:
+                    for qa in pares:
                         f.write(json.dumps(qa, ensure_ascii=False) + "\n")
 
-                print(f"💾 Autosaved {len(entries)} QAs from {file.name}")
-                completed += 1
-                elapsed = time.time() - start_batch
-                print(f"📊 Progress: {completed}/{total_files} | ⏱️ {elapsed:.1f}s elapsed ({(completed/total_files)*100:.1f}%)\n")
-            except Exception as e:
-                print(f"❌ Failed {file.name}: {e}")
+                archivos_procesados.add(archivo.name)
+                with open(ruta_procesados, "w", encoding="utf-8") as f:
+                    json.dump(sorted(archivos_procesados), f, ensure_ascii=False, indent=2)
 
-    final = dedupe(results)
+            except Exception as e:
+                print(f"❌ Error al procesar {archivo.name}: {e}")
+
+    resultado_final = eliminar_duplicados(resultados)
     with open("context_full_dataset.jsonl", "w", encoding="utf-8") as f:
-        for qa in final:
+        for qa in resultado_final:
             f.write(json.dumps(qa, ensure_ascii=False) + "\n")
 
-    elapsed = time.time() - start
-    print(f"✅ All done – dataset saved to context_full_dataset.jsonl")
-    print(f"⏱️ Total time: {elapsed/60:.2f} minutes")
+    duracion = time.time() - inicio
+    print(f"✅ ¡Listo! Dataset generado en context_full_dataset.jsonl")
+    print(f"🕐 Tiempo total: {duracion/60:.2f} minutos")
 
-def main():
-    start = time.time()
-    folder = Path("manuela_shower")
-    json_files = sorted(folder.glob("*.json"))
-    output_dir = Path("temp_outputs")
-    output_dir.mkdir(exist_ok=True)
-
-    processed_path = Path(".processed_files.json")
-    processed_files = set()
-    if processed_path.exists():
-        with open(processed_path, "r", encoding="utf-8") as pf:
-            processed_files = set(json.load(pf))
-
-    files_to_process = [f for f in json_files if f.name not in processed_files]
-    total_files = len(files_to_process)
-    results = []
-
-    print(f"📁 Total new files to process: {total_files}")
-
-    completed = 0
-    start_batch = time.time()
-
-    with ThreadPoolExecutor(max_workers=8) as pool:
-        futures = {pool.submit(process_file, jf): jf for jf in files_to_process}
-        for fut in as_completed(futures):
-            file = futures[fut]
-            try:
-                entries = fut.result()
-                print(f"✅ {file.name}: {len(entries)} QAs")
-                results.extend(entries)
-
-                out_path = output_dir / f"{file.stem}_qas.jsonl"
-                with open(out_path, "w", encoding="utf-8") as f:
-                    for qa in entries:
-                        f.write(json.dumps(qa, ensure_ascii=False) + "\n")
-
-                # Mark as processed
-                processed_files.add(file.name)
-                with open(processed_path, "w", encoding="utf-8") as pf:
-                    json.dump(sorted(processed_files), pf, ensure_ascii=False, indent=2)
-
-                print(f"💾 Autosaved {len(entries)} QAs from {file.name}")
-                completed += 1
-                elapsed = time.time() - start_batch
-                print(f"📊 Progress: {completed}/{total_files} | ⏱️ {elapsed:.1f}s elapsed ({(completed/total_files)*100:.1f}%)\n")
-            except Exception as e:
-                print(f"❌ Failed {file.name}: {e}")
-
-    # Merge all files in temp_outputs/
-    final = dedupe(results)
-    with open("context_full_dataset.jsonl", "w", encoding="utf-8") as f:
-        for qa in final:
-            f.write(json.dumps(qa, ensure_ascii=False) + "\n")
-
-    elapsed = time.time() - start
-    print(f"✅ All done – dataset saved to context_full_dataset.jsonl")
-    print(f"⏱️ Total time: {elapsed/60:.2f} minutes")
-    
-    
 if __name__ == "__main__":
     main()
+
     
     
-```
+"""
 # ✅ Acuratio Model Training — Handoff Notes
 
 Hola equipo 👋  
@@ -293,51 +248,10 @@ Aquí les dejo una guía clara para continuar el trabajo fácilmente.
 ### Cómo usarlo:
 1. Coloca nuevos archivos `.json` dentro de la carpeta `manuela_shower/`.
 2. Ejecuta:
-   ```bash
    python generate_dataset_pipeline.py
-   ```
 3. El sistema procesará **sólo los archivos nuevos**.
-4. El dataset final estará en: `context_full_dataset.jsonl`.
+4. El dataset final estará en: context_full_dataset.jsonl
 
 > 🧠 Se guarda un archivo `.processed_files.json` para llevar control de qué archivos ya fueron procesados.
 
----
-
-## 🎓 Entrenamiento del Modelo (`train_pipeline.py`)
-
-### Qué hace:
-- Convierte `context_full_dataset.jsonl` al formato `ChatML`.
-- Lanza entrenamiento sobre el modelo `meta-llama/Llama-3.2-3B-Instruct` con LoRA.
-
-### Cómo usarlo:
-```bash
-python train_pipeline.py
-```
-
-### Tips:
-- El entrenamiento actual incluye `context` como mensaje de sistema → más lento pero más preciso.
-- Si desean entrenar más rápido (sin contexto):
-  1. Modifiquen `convert_dataset_to_chatml()` para omitir el campo `"context"`.
-  2. Entrenen con el nuevo dataset.
-
----
-
-## 🛠️ Reentrenamiento vs Fine-tuning
-
-- Para **entrenar desde cero**: simplemente reejecuten el pipeline.
-- Para **continuar entrenamiento** sobre el modelo ya ajustado:
-  - Cambien en `run_train_on_model()`:
-    ```python
-    resume_from_checkpoint=True
-    base_model_name="Llama-3.2-3B-lora"
-    ```
-
----
-
-## 🤝 Dudas o mejoras
-
-Para cualquier ajuste adicional, les recomiendo revisar los docstrings y comentarios en los `.py`. El código está modularizado y comentado.
-
-¡Éxito en el proyecto! 🚀  
-—Andres
-```
+"""
