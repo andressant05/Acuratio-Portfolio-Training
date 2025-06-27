@@ -35,7 +35,7 @@ docker run -d --runtime nvidia --gpus all \
   --name my_vllm_container \
   -v /home/jonanderjimenezz/.cache/huggingface/:/root/.cache/huggingface \
   -p 9000:8000 --ipc=host \
-  --env "HUGGING_FACE_HUB_TOKEN=***REMOVED***" \
+  --env "HUGGING_FACE_HUB_TOKEN=token" \
   vllm/vllm-openai:latest \
   --model meta-llama/Llama-3.3-70B-Instruct \
   --tensor-parallel-size 4
@@ -72,7 +72,7 @@ gcloud compute ssh andres-vllm-2 --zone=europe-west1-b -- -L 8888:localhost:8888
 docker run -d --runtime nvidia --gpus all \
   --name my_vllm_container \
   -v ~/.cache/huggingface:/root/.cache/huggingface \
-  --env "HUGGING_FACE_HUB_TOKEN=***REMOVED***" \
+  --env "HUGGING_FACE_HUB_TOKEN=token" \
   -p 8000:8000 --ipc=host \
   vllm/vllm-openai:latest \
   --model meta-llama/Llama-3.2-3B-Instruct \
