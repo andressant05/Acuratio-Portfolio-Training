@@ -159,10 +159,13 @@ def run_train_on_model(
     trainer.train(resume_from_checkpoint=resume_from_checkpoint)
     trainer.model.save_pretrained(new_model_name)
     print("✅ Modelo guardado con éxito:", new_model_name)
-
-
-# 🚀 MAIN FLOW
-if __name__ == "__main__":
+    
+# ✅ Define main() anywhere before this point
+def main():
     convert_dataset_to_chatml("context_full_dataset.jsonl", "full_contexted_manual_trained_dataset.jsonl")
     raw_dataset = load_dataset("json", data_files="full_contexted_manual_trained_dataset.jsonl", split="train")
     run_train_on_model(hu_fa_data=raw_dataset)
+
+# ✅ Now trigger it when script is run directly
+if __name__ == "__main__":
+    main()
