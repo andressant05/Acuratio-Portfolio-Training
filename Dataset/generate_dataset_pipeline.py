@@ -217,5 +217,127 @@ def main():
     print(f"✅ All done – dataset saved to context_full_dataset.jsonl")
     print(f"⏱️ Total time: {elapsed/60:.2f} minutes")
 
+def main():
+    start = time.time()
+    folder = Path("manuela_shower")
+    json_files = sorted(folder.glob("*.json"))
+    output_dir = Path("temp_outputs")
+    output_dir.mkdir(exist_ok=True)
+
+    processed_path = Path(".processed_files.json")
+    processed_files = set()
+    if processed_path.exists():
+        with open(processed_path, "r", encoding="utf-8") as pf:
+            processed_files = set(json.load(pf))
+
+    files_to_process = [f for f in json_files if f.name not in processed_files]
+    total_files = len(files_to_process)
+    results = []
+
+    print(f"📁 Total new files to process: {total_files}")
+
+    completed = 0
+    start_batch = time.time()
+
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        futures = {pool.submit(process_file, jf): jf for jf in files_to_process}
+        for fut in as_completed(futures):
+            file = futures[fut]
+            try:
+                entries = fut.result()
+                print(f"✅ {file.name}: {len(entries)} QAs")
+                results.extend(entries)
+
+                out_path = output_dir / f"{file.stem}_qas.jsonl"
+                with open(out_path, "w", encoding="utf-8") as f:
+                    for qa in entries:
+                        f.write(json.dumps(qa, ensure_ascii=False) + "\n")
+
+                # Mark as processed
+                processed_files.add(file.name)
+                with open(processed_path, "w", encoding="utf-8") as pf:
+                    json.dump(sorted(processed_files), pf, ensure_ascii=False, indent=2)
+
+                print(f"💾 Autosaved {len(entries)} QAs from {file.name}")
+                completed += 1
+                elapsed = time.time() - start_batch
+                print(f"📊 Progress: {completed}/{total_files} | ⏱️ {elapsed:.1f}s elapsed ({(completed/total_files)*100:.1f}%)\n")
+            except Exception as e:
+                print(f"❌ Failed {file.name}: {e}")
+
+    # Merge all files in temp_outputs/
+    final = dedupe(results)
+    with open("context_full_dataset.jsonl", "w", encoding="utf-8") as f:
+        for qa in final:
+            f.write(json.dumps(qa, ensure_ascii=False) + "\n")
+
+    elapsed = time.time() - start
+    print(f"✅ All done – dataset saved to context_full_dataset.jsonl")
+    print(f"⏱️ Total time: {elapsed/60:.2f} minutes")
+    
+    
 if __name__ == "__main__":
     main()
+    
+    
+```
+# ✅ Acuratio Model Training — Handoff Notes
+
+Hola equipo 👋  
+Aquí les dejo una guía clara para continuar el trabajo fácilmente.
+
+---
+
+## 🔁 Generación de Dataset (`generate_dataset_pipeline.py`)
+
+### Cómo usarlo:
+1. Coloca nuevos archivos `.json` dentro de la carpeta `manuela_shower/`.
+2. Ejecuta:
+   ```bash
+   python generate_dataset_pipeline.py
+   ```
+3. El sistema procesará **sólo los archivos nuevos**.
+4. El dataset final estará en: `context_full_dataset.jsonl`.
+
+> 🧠 Se guarda un archivo `.processed_files.json` para llevar control de qué archivos ya fueron procesados.
+
+---
+
+## 🎓 Entrenamiento del Modelo (`train_pipeline.py`)
+
+### Qué hace:
+- Convierte `context_full_dataset.jsonl` al formato `ChatML`.
+- Lanza entrenamiento sobre el modelo `meta-llama/Llama-3.2-3B-Instruct` con LoRA.
+
+### Cómo usarlo:
+```bash
+python train_pipeline.py
+```
+
+### Tips:
+- El entrenamiento actual incluye `context` como mensaje de sistema → más lento pero más preciso.
+- Si desean entrenar más rápido (sin contexto):
+  1. Modifiquen `convert_dataset_to_chatml()` para omitir el campo `"context"`.
+  2. Entrenen con el nuevo dataset.
+
+---
+
+## 🛠️ Reentrenamiento vs Fine-tuning
+
+- Para **entrenar desde cero**: simplemente reejecuten el pipeline.
+- Para **continuar entrenamiento** sobre el modelo ya ajustado:
+  - Cambien en `run_train_on_model()`:
+    ```python
+    resume_from_checkpoint=True
+    base_model_name="Llama-3.2-3B-lora"
+    ```
+
+---
+
+## 🤝 Dudas o mejoras
+
+Para cualquier ajuste adicional, les recomiendo revisar los docstrings y comentarios en los `.py`. El código está modularizado y comentado.
+
+¡Éxito en el proyecto! 🚀  
+—Andres
+```
