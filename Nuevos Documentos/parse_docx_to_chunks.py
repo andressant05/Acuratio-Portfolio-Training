@@ -67,10 +67,10 @@ def deduplicar_chunks(chunks: List[str]) -> List[str]:
             resultado.append(limpio)
     return resultado
 
-# 🧠 Procesa todos los .docx de una carpeta y guarda jsons en manuela_shower/
+# 🧠 Procesa todos los .docx de una carpeta y guarda jsons en processed_chunks/
 def procesar_nuevos_documentos():
     carpeta_nuevos = Path("nuevos_docs")
-    carpeta_destino = Path("manuela_shower")
+    carpeta_destino = Path("processed_chunks")
     carpeta_destino.mkdir(parents=True, exist_ok=True)
 
     for archivo in carpeta_nuevos.glob("*.docx"):
