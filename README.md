@@ -64,7 +64,7 @@ python train_pipeline.py
 
 ---
 
-## ⚙️ Instalación del entorno
+##  Instalación del entorno
 
 ```bash
 git clone https://github.com/andressant05/Acuratio-Model-Training.git
