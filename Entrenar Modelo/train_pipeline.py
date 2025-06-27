@@ -169,3 +169,12 @@ def main():
 # ✅ Now trigger it when script is run directly
 if __name__ == "__main__":
     main()
+"""
+📌 NOTA IMPORTANTE:
+Actualmente, este script entrena el modelo incluyendo el 'contexto' como mensaje de sistema (system message).
+Esto mejora la calidad del modelo, pero aumenta el tiempo de entrenamiento significativamente (~3x).
+
+Si se desea hacer entrenamiento más rápido (sin contexto):
+1. Modificar la función `convert_dataset_to_chatml` para no incluir el campo 'context'
+2. Entrenar con ese nuevo dataset. Luego, si se desea, hacer fine-tuning adicional con el dataset con contexto.
+"""
