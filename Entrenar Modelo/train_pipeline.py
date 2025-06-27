@@ -11,6 +11,9 @@ from transformers import (
 from peft import PeftModel, LoraConfig, get_peft_model
 from huggingface_hub import login
 from trl import SFTTrainer
+from dotenv import load_dotenv
+load_dotenv()
+hugging_face_token = os.getenv("HUGGING_FACE_TOKEN")
 
 # 🔧 CONFIGURACIÓN GLOBAL
 os.environ['CUDA_VISIBLE_DEVICES'] = '0,1,2,3'  # GPUs disponibles
