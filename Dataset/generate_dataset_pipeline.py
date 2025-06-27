@@ -185,7 +185,7 @@ def procesar_archivo(ruta_json):
 # 🧠 Ejecución principal del pipeline: detecta archivos nuevos, procesa y graba
 def main():
     inicio = time.time()
-    carpeta = Path("manuela_shower")
+    carpeta = Path("processed_chunks")
     archivos = sorted(carpeta.glob("*.json"))
     carpeta_salida = Path("temp_outputs")
     carpeta_salida.mkdir(exist_ok=True)
@@ -246,7 +246,7 @@ Aquí les dejo una guía clara para continuar el trabajo fácilmente.
 ## 🔁 Generación de Dataset (`generate_dataset_pipeline.py`)
 
 ### Cómo usarlo:
-1. Coloca nuevos archivos `.json` dentro de la carpeta `manuela_shower/`.
+1. Coloca nuevos archivos `.json` dentro de la carpeta `processed_chunks/`.
 2. Ejecuta:
    python generate_dataset_pipeline.py
 3. El sistema procesará **sólo los archivos nuevos**.
