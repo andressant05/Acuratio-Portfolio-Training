@@ -12,17 +12,17 @@ def extraer_texto_docx(ruta: str) -> str:
 
 # 🧼 Limpia el texto extraído de errores comunes de OCR
 def limpiar_texto_ocr(texto: str) -> str:
-    texto = re.sub(r'-\n', '', texto)                 # Quita guiones de corte de línea
-    texto = re.sub(r'\n(?=\S)', ' ', texto)           # Une líneas rotas
-    texto = re.sub(r'\n\s*\n', '\n\n', texto)         # Normaliza saltos de párrafo
+    texto = re.sub(r'-\n', '', texto)
+    texto = re.sub(r'\n(?=\S)', ' ', texto)
+    texto = re.sub(r'\n\s*\n', '\n\n', texto)
     return texto.strip()
 
-# 📑 Divide el texto en secciones lógicas usando saltos dobles de línea
+# 📑 Divide el texto en secciones
 def dividir_en_secciones(texto: str) -> List[str]:
     secciones = re.split(r'\n{2,}', texto)
     return [s.strip() for s in secciones if s.strip()]
 
-# 📏 Si alguna sección es demasiado larga, la divide en fragmentos manejables
+# 📏 Divide secciones largas
 def cortar_secciones_largas(secciones: List[str], max_palabras: int = 1000) -> List[str]:
     resultado = []
     for seccion in secciones:
@@ -34,7 +34,7 @@ def cortar_secciones_largas(secciones: List[str], max_palabras: int = 1000) -> L
                 resultado.append(" ".join(palabras[i:i + max_palabras]))
     return resultado
 
-# 🚫 Elimina fragmentos conocidos de boilerplate legal o técnico
+# 🚫 Elimina boilerplate
 def eliminar_boilerplate(chunks: List[str]) -> List[str]:
     frases = [
         "norma española", "Depósito legal:", "Editada e impresa",
@@ -44,7 +44,7 @@ def eliminar_boilerplate(chunks: List[str]) -> List[str]:
     ]
     return [c for c in chunks if not any(f.lower() in c.lower() for f in frases)]
 
-# 🌀 Elimina encabezados repetidos específicos de documentos
+# 🌀 Elimina encabezados repetidos
 def eliminar_encabezados_repetidos(chunks: List[str]) -> List[str]:
     vistos = set()
     resultado = []
@@ -67,35 +67,30 @@ def deduplicar_chunks(chunks: List[str]) -> List[str]:
             resultado.append(limpio)
     return resultado
 
-# 🧠 Pipeline completo para todos los .docx en la carpeta de entrada
-def procesar_docx_a_chunks(carpeta_entrada: str, carpeta_salida: str) -> None:
-    entrada = Path(carpeta_entrada)
-    salida = Path(carpeta_salida)
-    salida.mkdir(parents=True, exist_ok=True)
+# 🧠 Procesa todos los .docx de una carpeta y guarda jsons en manuela_shower/
+def procesar_nuevos_documentos():
+    carpeta_nuevos = Path("nuevos_docs")
+    carpeta_destino = Path("manuela_shower")
+    carpeta_destino.mkdir(parents=True, exist_ok=True)
 
-    for archivo in entrada.glob("*.docx"):
+    for archivo in carpeta_nuevos.glob("*.docx"):
         try:
-            texto_raw = extraer_texto_docx(archivo)
-            texto_limpio = limpiar_texto_ocr(texto_raw)
-
-            secciones = dividir_en_secciones(texto_limpio)
+            texto = limpiar_texto_ocr(extraer_texto_docx(archivo))
+            secciones = dividir_en_secciones(texto)
             secciones = eliminar_boilerplate(secciones)
             secciones = eliminar_encabezados_repetidos(secciones)
-            fragmentos_finales = deduplicar_chunks(cortar_secciones_largas(secciones))
+            chunks = deduplicar_chunks(cortar_secciones_largas(secciones))
 
-            salida_json = {
-                "filename": archivo.name,
-                "chunks": fragmentos_finales
-            }
+            salida_json = {"filename": archivo.name, "chunks": chunks}
+            destino = carpeta_destino / f"{archivo.stem}.json"
 
-            ruta_salida = salida / f"{archivo.stem}.json"
-            with open(ruta_salida, 'w', encoding='utf-8') as f:
+            with open(destino, 'w', encoding='utf-8') as f:
                 json.dump(salida_json, f, indent=2, ensure_ascii=False)
 
-            print(f"✅ Procesado: {archivo.name} → {ruta_salida.name}")
+            print(f"✅ Procesado: {archivo.name} → {destino.name}")
         except Exception as e:
             print(f"❌ Error procesando {archivo.name}: {e}")
 
-# ▶️ Punto de entrada
 if __name__ == "__main__":
-    procesar_docx_a_chunks("manuela_docs", "manuela_shower")
+    procesar_nuevos_documentos()
+
