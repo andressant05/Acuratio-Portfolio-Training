@@ -17,7 +17,7 @@ Acuratio-Model-Training/
 │   └── README.md
 ├── Nuevos Documentos/      #  DOCX nuevos y script para convertirlos a JSON
 │   ├── parse_docx_to_chunks.py
-│   ├── manuela_shower.zip
+│   ├── processed_chunks.zip
 │   ├── nuevos_docs.zip
 │   └── README.md
 ├── requirements.txt        #  Requisitos Python
@@ -33,12 +33,12 @@ Desde la carpeta principal:
 
 ```bash
 cd Nuevos\ Documentos/
-unzip manuela_shower.zip
+unzip processed_chunks.zip
 unzip nuevos_docs.zip
 python parse_docx_to_chunks.py
 ```
 
-→ Esto generará archivos `.json` automáticamente dentro de `manuela_shower/`, listos para el siguiente paso.
+→ Esto generará archivos `.json` automáticamente dentro de `processed_chunks/`, listos para el siguiente paso.
 
 ---
 
@@ -81,10 +81,10 @@ pip install -r requirements.txt
 - Divide por secciones lógicas
 - Corta en fragmentos ≤ 1000 palabras
 - Elimina encabezados y duplicados
-- Guarda `.json` directamente en `manuela_shower/`
+- Guarda `.json` directamente en `processed_chunks/`
 
 ### `generate_dataset_pipeline.py`
-- Lee todos los `.json` de `manuela_shower/`
+- Lee todos los `.json` de `processed_chunks/`
 - Genera pares pregunta-respuesta vía LLM (LLaMA 70B)
 - Evita duplicados con fuzzy logic
 - Guarda el dataset final en `context_full_dataset.jsonl`
