@@ -1,89 +1,108 @@
-
 # Acuratio Model Training
 
-Este repositorio contiene todo lo necesario para generar un dataset técnico en español y entrenar un modelo de lenguaje basado en LLaMA-3 utilizando LoRA. Incluye pipelines automatizados y configuración para su despliegue en máquinas virtuales con `vllm`.
+Este repositorio automatiza por completo el flujo:  
+**.docx → chunks .json →  generar dataset QA →  entrenar modelo LLaMA‑3 con LoRA**.
 
 ---
 
-## Estructura del Proyecto
+##  Estructura del Proyecto
 
 ```
 Acuratio-Model-Training/
-│
-├── Dataset/
-│   └── generate_dataset_pipeline.py         # Generación completa del dataset
-│
-├── Entrenar Modelo/
-│   └── train_pipeline.py                    # Pipeline de entrenamiento con LoRA
-│
-├── Maquina Virtual/
-│   └── README.md                            # Configuración de entorno en VMs (GCP)
-│
-├── requirements.txt                         # Requisitos del entorno
-└── README.md                                # Este archivo
+├── Dataset/                #  Pipeline para generar el dataset
+│   └── generate_dataset_pipeline.py
+├── Entrenar Modelo/        #  Entrenamiento del modelo LLaMA con LoRA
+│   └── train_pipeline.py
+├── Maquina Virtual/        #  Configuración para máquinas virtuales (GCP)
+│   └── README.md
+├── Nuevos Documentos/      #  DOCX nuevos y script para convertirlos a JSON
+│   ├── parse_docx_to_chunks.py
+│   ├── manuela_shower.zip
+│   ├── nuevos_docs.zip
+│   └── README.md
+├── requirements.txt        #  Requisitos Python
+└── README.md               #  Este archivo
 ```
 
 ---
 
-## Objetivo
+##  Flujo en 3 pasos
 
-Construir un sistema modular y reproducible para:
+### 1. Añadir nuevos `.docx`
+Desde la carpeta principal:
 
-- Generar datasets QA a partir de documentación técnica en español.
-- Convertir los datos al formato `ChatML`.
-- Entrenar modelos LLaMA-3 con `LoRA`.
-- Desplegar el modelo en entornos con GPUs (A100) mediante `vllm`.
+```bash
+cd Nuevos\ Documentos/
+unzip manuela_shower.zip
+unzip nuevos_docs.zip
+python parse_docx_to_chunks.py
+```
+
+→ Esto generará archivos `.json` automáticamente dentro de `manuela_shower/`, listos para el siguiente paso.
 
 ---
 
-## Instalación
+### 2. Generar Dataset
 
-1. Clona el repositorio:
+```bash
+cd ../Dataset/
+python generate_dataset_pipeline.py
 ```
-git clone https://github.com/tu_usuario/Acuratio-Model-Training.git
+
+→ Crea el archivo `context_full_dataset.jsonl` (formato instructivo de QA).
+
+---
+
+### 3. Entrenar el Modelo
+
+```bash
+cd ../Entrenar\ Modelo/
+python train_pipeline.py
+```
+
+→ Usa LoRA y guarda el modelo ajustado en `results_lora/`.
+
+---
+
+## ⚙️ Instalación del entorno
+
+```bash
+git clone https://github.com/andressant05/Acuratio-Model-Training.git
 cd Acuratio-Model-Training
-```
-
-2. Instala las dependencias:
-```
 pip install -r requirements.txt
 ```
 
 ---
 
-## Generación del Dataset
+##  Qué hace cada script
 
-Ejecuta el siguiente pipeline para generar el dataset inicial estructurado:
-```
-python Dataset/generate_dataset_pipeline.py
-```
-- El archivo de salida será: `context_full_dataset.jsonl`
+### `parse_docx_to_chunks.py`
+- Limpia errores comunes de OCR
+- Divide por secciones lógicas
+- Corta en fragmentos ≤ 1000 palabras
+- Elimina encabezados y duplicados
+- Guarda `.json` directamente en `manuela_shower/`
 
----
+### `generate_dataset_pipeline.py`
+- Lee todos los `.json` de `manuela_shower/`
+- Genera pares pregunta-respuesta vía LLM (LLaMA 70B)
+- Evita duplicados con fuzzy logic
+- Guarda el dataset final en `context_full_dataset.jsonl`
 
-## Entrenamiento del Modelo
-
-Lanza el entrenamiento del modelo sobre el dataset procesado:
-```
-python Entrenar\\ Modelo/train_pipeline.py
-```
-- Entrena con LoRA y guarda los pesos finos.
-- Incluye la conversión automática a `ChatML`.
-
----
-
-## Configuración de la Máquina Virtual
-
-Consulta el siguiente archivo para instrucciones completas de despliegue:
-```
-Maquina Virtual/README.md
-```
-- Incluye configuración de `nginx`, `Jupyter Lab`, `SSH`, y ejecución de `vllm` con Docker.
+### `train_pipeline.py`
+- Convierte el dataset al formato ChatML
+- Aplica LoRA sobre un LLaMA-3 base
+- Entrena y guarda el modelo afinado
 
 ---
 
-## Contacto
+## Despliegue en la nube (opcional)
 
-Para dudas, mejoras o colaboración: **andressant05**
+Consulta `Maquina Virtual/README.md` para ejecutar los modelos con `vllm` y GPUs A100 en GCP.
 
+---
 
+## Autor y contacto
+
+**andressant05**  
+Gracias por continuar con el proyecto. ¡A entrenar modelos con estilo!
