@@ -1,0 +1,16 @@
+(base) g05santosalcocera@jonander-a100:~$ docker restart my_vllm_container 
+my_vllm_container
+(base) g05santosalcocera@jonander-a100:~$ docker stop my_vllm_container 
+my_vllm_container
+(base) g05santosalcocera@jonander-a100:~$ docker rm my_vllm_container 
+my_vllm_container
+(base) g05santosalcocera@jonander-a100:~$ docker run -d --runtime nvidia --gpus all \
+  --name my_vllm_container \
+  -v /home/jonanderjimenezz/.cache/huggingface/:/root/.cache/huggingface \
+  -p 9000:8000 --ipc=host \
+  --env "HUGGING_FACE_HUB_TOKEN=***REMOVED***" \
+  vllm/vllm-openai:latest \
+  --model meta-llama/Llama-3.3-70B-Instruct \
+  --tensor-parallel-size 4
+9829e64209f9b254a1c48a13a6034483f3a6d738890915e99a4b2f4c76f7b86f
+(base) g05santosalcocera@jonander-a100:~$ docker logs my_vllm_container -f
