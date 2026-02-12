@@ -5,24 +5,24 @@ from docx import Document
 from pathlib import Path
 from typing import List
 
-# 📥 Extrae texto desde un archivo .docx
+# Extrae texto desde un archivo .docx
 def extraer_texto_docx(ruta: str) -> str:
     doc = Document(ruta)
     return "\n".join([p.text for p in doc.paragraphs])
 
-# 🧼 Limpia el texto extraído de errores comunes de OCR
+# Limpia el texto extraído de errores comunes de OCR
 def limpiar_texto_ocr(texto: str) -> str:
     texto = re.sub(r'-\n', '', texto)
     texto = re.sub(r'\n(?=\S)', ' ', texto)
     texto = re.sub(r'\n\s*\n', '\n\n', texto)
     return texto.strip()
 
-# 📑 Divide el texto en secciones
+# Divide el texto en secciones
 def dividir_en_secciones(texto: str) -> List[str]:
     secciones = re.split(r'\n{2,}', texto)
     return [s.strip() for s in secciones if s.strip()]
 
-# 📏 Divide secciones largas
+# Divide secciones largas
 def cortar_secciones_largas(secciones: List[str], max_palabras: int = 1000) -> List[str]:
     resultado = []
     for seccion in secciones:
@@ -34,7 +34,7 @@ def cortar_secciones_largas(secciones: List[str], max_palabras: int = 1000) -> L
                 resultado.append(" ".join(palabras[i:i + max_palabras]))
     return resultado
 
-# 🚫 Elimina boilerplate
+# Elimina boilerplate
 def eliminar_boilerplate(chunks: List[str]) -> List[str]:
     frases = [
         "norma española", "Depósito legal:", "Editada e impresa",
@@ -44,7 +44,7 @@ def eliminar_boilerplate(chunks: List[str]) -> List[str]:
     ]
     return [c for c in chunks if not any(f.lower() in c.lower() for f in frases)]
 
-# 🌀 Elimina encabezados repetidos
+# Elimina encabezados repetidos
 def eliminar_encabezados_repetidos(chunks: List[str]) -> List[str]:
     vistos = set()
     resultado = []
@@ -57,7 +57,7 @@ def eliminar_encabezados_repetidos(chunks: List[str]) -> List[str]:
         resultado.append(chunk)
     return resultado
 
-# 🔁 Elimina duplicados exactos
+# Elimina duplicados exactos
 def deduplicar_chunks(chunks: List[str]) -> List[str]:
     vistos, resultado = set(), []
     for c in chunks:
@@ -67,7 +67,7 @@ def deduplicar_chunks(chunks: List[str]) -> List[str]:
             resultado.append(limpio)
     return resultado
 
-# 🧠 Procesa todos los .docx de una carpeta y guarda jsons en processed_chunks/
+# Procesa todos los .docx de una carpeta y guarda jsons en processed_chunks/
 def procesar_nuevos_documentos():
     carpeta_nuevos = Path("nuevos_docs")
     carpeta_destino = Path("processed_chunks")
@@ -87,9 +87,9 @@ def procesar_nuevos_documentos():
             with open(destino, 'w', encoding='utf-8') as f:
                 json.dump(salida_json, f, indent=2, ensure_ascii=False)
 
-            print(f"✅ Procesado: {archivo.name} → {destino.name}")
+            print(f" Procesado: {archivo.name} → {destino.name}")
         except Exception as e:
-            print(f"❌ Error procesando {archivo.name}: {e}")
+            print(f" Error procesando {archivo.name}: {e}")
 
 if __name__ == "__main__":
     procesar_nuevos_documentos()
