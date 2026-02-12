@@ -1,4 +1,3 @@
-import os
 import json
 import time
 import difflib
@@ -8,7 +7,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from openai import OpenAI
 from fuzzywuzzy import fuzz
 
-# 💬 Ejemplos que sirven de guía (few-shots) para el modelo LLM
+# Ejemplos que sirven de guía (few-shots) para el modelo LLM
 EJEMPLOS_TIPICOS = {
     "definition": [
         {
@@ -64,17 +63,17 @@ EJEMPLOS_TIPICOS = {
     ]
 }
 
-# 🔧 Cliente para comunicarse con el modelo LLM (en este caso, llama3 local)
+# Cliente para comunicarse con el modelo LLM (en este caso, llama3 local)
 cliente_llm = OpenAI(api_key="EMPTY", base_url="http://localhost:9000/v1")
 
-# 🎯 Instrucción general que guía al modelo
+# Instrucción general que guía al modelo
 INSTRUCCION_SISTEMA = (
     "You are a professional dataset generator for machine learning. Your goal is to produce instruction-response pairs "
     "that are strictly based on the input document chunk. Never fabricate information or introduce concepts not explicitly supported by the text. "
     "Responses must be formal, technical, and reference the language or logic of the document exactly. Avoid summaries, advice, or motivation."
 )
 
-# 🔪 Divide un texto largo en fragmentos manejables de cierto tamaño
+# Divide un texto largo en fragmentos manejables de cierto tamaño
 def dividir_texto(texto_completo, max_caracteres=2000):
     oraciones = texto_completo.split(". ")
     fragmentos, actual = [], ""
@@ -88,7 +87,7 @@ def dividir_texto(texto_completo, max_caracteres=2000):
         fragmentos.append(actual.strip())
     return fragmentos
 
-# 🧱 Construye el prompt con los ejemplos + texto a analizar
+# Construye el prompt con los ejemplos + texto a analizar
 def construir_prompt(ejemplos, fragmento, tipo, n=2):
     ejemplos_str = "\n\n".join(json.dumps(x, ensure_ascii=False) for x in ejemplos)
     return f"""{INSTRUCCION_SISTEMA}
@@ -101,7 +100,7 @@ def construir_prompt(ejemplos, fragmento, tipo, n=2):
 Now generate {n} instruction-response pairs in JSONL format. Base every detail strictly on the document content. Do not invent facts.
 """
 
-# 🔮 Envía el prompt al modelo y obtiene la respuesta
+# Envía el prompt al modelo y obtiene la respuesta
 def llamar_llm(prompt):
     respuesta = cliente_llm.chat.completions.create(
         model="meta-llama/Llama-3.3-70B-Instruct",
@@ -114,7 +113,7 @@ def llamar_llm(prompt):
     )
     return respuesta.choices[0].message.content
 
-# 📤 Interpreta la respuesta del modelo y extrae los pares válidos
+# Interpreta la respuesta del modelo y extrae los pares válidos
 def interpretar_respuesta(texto_respuesta, tipo):
     resultado = []
     for linea in texto_respuesta.strip().splitlines():
@@ -127,7 +126,7 @@ def interpretar_respuesta(texto_respuesta, tipo):
             continue
     return resultado
 
-# 🤖 Genera pares QA para cada fragmento de texto
+# Genera pares QA para cada fragmento de texto
 def generar_qa_para_fragmento(texto, preguntas_por_tipo=1, tipos_requeridos=None):
     if tipos_requeridos is None:
         tipos_requeridos = ["definition", "justification", "scenario", "role"]
@@ -138,7 +137,7 @@ def generar_qa_para_fragmento(texto, preguntas_por_tipo=1, tipos_requeridos=None
         resultado.extend(interpretar_respuesta(respuesta, tipo))
     return resultado
 
-# 🧹 Elimina duplicados similares entre prompts
+# Elimina duplicados similares entre prompts
 def eliminar_duplicados(lista, umbral=90):
     unicos = []
     for item in lista:
@@ -147,14 +146,14 @@ def eliminar_duplicados(lista, umbral=90):
         unicos.append(item)
     return unicos
 
-# 🔁 Compara prompts para evitar repetir
+# Compara prompts para evitar repetir
 def es_duplicado(prompt_nuevo, prompts_existentes, umbral=0.9):
     for existente in prompts_existentes:
         if difflib.SequenceMatcher(None, prompt_nuevo.lower(), existente.lower()).ratio() > umbral:
             return True
     return False
 
-# 🔍 Procesa un archivo JSON, genera pares y adjunta metadatos
+# Procesa un archivo JSON, genera pares y adjunta metadatos
 def procesar_archivo(ruta_json):
     datos = json.loads(ruta_json.read_text(encoding="utf-8"))
     texto = "\n\n".join(datos["chunks"])
@@ -182,7 +181,7 @@ def procesar_archivo(ruta_json):
 
     return eliminar_duplicados(resultado)
 
-# 🧠 Ejecución principal del pipeline: detecta archivos nuevos, procesa y graba
+# Ejecución principal del pipeline: detecta archivos nuevos, procesa y graba
 def main():
     # Inicia temporizador para medir la duración total del proceso
     inicio = time.time()
@@ -252,14 +251,14 @@ if __name__ == "__main__":
     
     
 """
-# ✅ Acuratio Model Training — Handoff Notes
+# Acuratio Model Training — Handoff Notes
 
-Hola equipo 👋  
+Hola equipo  
 Aquí les dejo una guía clara para continuar el trabajo fácilmente.
 
 ---
 
-## 🔁 Generación de Dataset (`generate_dataset_pipeline.py`)
+## Generación de Dataset (`generate_dataset_pipeline.py`)
 
 ### Cómo usarlo:
 1. Coloca nuevos archivos `.json` dentro de la carpeta `processed_chunks/`.
@@ -268,6 +267,6 @@ Aquí les dejo una guía clara para continuar el trabajo fácilmente.
 3. El sistema procesará **sólo los archivos nuevos**.
 4. El dataset final estará en: context_full_dataset.jsonl
 
-> 🧠 Se guarda un archivo `.processed_files.json` para llevar control de qué archivos ya fueron procesados.
+> Se guarda un archivo `.processed_files.json` para llevar control de qué archivos ya fueron procesados.
 
 """
