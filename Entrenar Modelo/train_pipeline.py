@@ -1,4 +1,3 @@
-import os
 import json
 import warnings
 from datetime import datetime
@@ -15,12 +14,12 @@ from dotenv import load_dotenv
 load_dotenv()
 hugging_face_token = os.getenv("HUGGING_FACE_TOKEN")
 
-# 🔧 CONFIGURACIÓN GLOBAL
+# CONFIGURACIÓN GLOBAL
 os.environ['CUDA_VISIBLE_DEVICES'] = '0,1,2,3'  # GPUs disponibles
 warnings.filterwarnings("ignore", category=FutureWarning, module="transformers.utils.hub")
 login(token=hugging_face_token)  # Autenticación Hugging Face
 
-# 🔁 FUNCION: convierte el dataset JSONL original en formato ChatML
+# FUNCION: convierte el dataset JSONL original en formato ChatML
 def convertir_dataset_a_chatml(ruta_entrada, ruta_salida):
     with open(ruta_entrada, "r", encoding="utf-8") as fin, open(ruta_salida, "w", encoding="utf-8") as fout:
         for linea in fin:
@@ -38,10 +37,10 @@ def convertir_dataset_a_chatml(ruta_entrada, ruta_salida):
                 }
                 fout.write(json.dumps(formato, ensure_ascii=False) + "\n")
             except Exception as e:
-                print(f"❌ Línea ignorada debido a error: {e}")
-    print("✅ Dataset convertido a ChatML en:", ruta_salida)
+                print(f" Línea ignorada debido a error: {e}")
+    print(" Dataset convertido a ChatML en:", ruta_salida)
 
-# 🧼 FUNCION: preprocesado del dataset si viene en otro formato
+# FUNCION: preprocesado del dataset si viene en otro formato
 def preprocesar_dataset(nombre_dataset, division="train"):
     dataset = load_dataset(nombre_dataset, split=division,
                            cache_dir=os.path.expanduser("~/.cache/huggingface_datasets"))
@@ -62,7 +61,7 @@ def preprocesar_dataset(nombre_dataset, division="train"):
     else:
         raise ValueError("Estructura de dataset no soportada.")
 
-# 🧠 FUNCION: formatea cada ejemplo al estilo ChatML con encabezados y fecha actual
+# FUNCION: formatea cada ejemplo al estilo ChatML con encabezados y fecha actual
 def formato_chat_para_llama(ejemplo):
     contexto = ""
     for msg in ejemplo["messages"]:
@@ -91,7 +90,7 @@ def formato_chat_para_llama(ejemplo):
 
     return {"text": texto}
 
-# 🔥 FUNCION: realiza el entrenamiento con LoRA sobre el modelo base o de checkpoint
+# FUNCION: realiza el entrenamiento con LoRA sobre el modelo base o de checkpoint
 def entrenar_modelo(
     datos_hf="full_contexted_manual_trained_dataset.jsonl",
     salida="./results_lora",
@@ -163,7 +162,7 @@ def entrenar_modelo(
     print(f"🚀 Iniciando entrenamiento — guardando como: {nombre_modelo_nuevo}")
     trainer.train(resume_from_checkpoint=reanudar)
     trainer.model.save_pretrained(nombre_modelo_nuevo)
-    print("✅ Modelo guardado exitosamente:", nombre_modelo_nuevo)
+    print(" Modelo guardado exitosamente:", nombre_modelo_nuevo)
 
 # MAIN: orquesta el flujo completo del pipeline de entrenamiento
 def main():
@@ -191,11 +190,11 @@ if __name__ == "__main__":
     main()
 
 """
-📌 NOTA:
+NOTA:
 Este script incluye el campo 'contexto' como mensaje de sistema, lo que mejora la calidad
 del modelo pero aumenta ~3× el tiempo de entrenamiento.
 
-👉 Para un entrenamiento más rápido (sin contexto):
+ Para un entrenamiento más rápido (sin contexto):
    - Modificar `convertir_dataset_a_chatml` para que omita el campo 'contexto'
    - Entrenar con ese dataset simplificado
    - Luego, opcionalmente, hacer fine-tuning con dataset completo
